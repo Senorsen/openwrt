@@ -33,7 +33,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          ref: master
+          ref: openwrt-21.02
 
       - name: Space cleanup
         env:
@@ -73,12 +73,17 @@ jobs:
           # 例如:
 
           cat >> .config <<EOF
+          CONFIG_TARGET_x86=y
           CONFIG_TARGET_x86_64=y
+          CONFIG_TARGET_x86_64_Generic=y
           CONFIG_TARGET_IMAGES_GZIP=y
-          CONFIG_KERNEL_BUILD_USER="OpenWrt-CI"
-          CONFIG_KERNEL_BUILD_DOMAIN="Azure"
           CONFIG_DEFAULT_dnsmasq-full=y
+          CONFIG_KERNEL_BUILD_USER="GitHub Actions CI"
+          CONFIG_KERNEL_BUILD_DOMAIN="Azure"
           EOF
+          
+          echo "Written .config:"
+          cat .config
 
           #
           # ===============================================================
@@ -86,6 +91,8 @@ jobs:
 
           sed -i 's/^[ \t]*//g' ./.config
           make defconfig
+          echo "After defconfig:"
+          cat .config
 
       - name: Make download
         run: |
