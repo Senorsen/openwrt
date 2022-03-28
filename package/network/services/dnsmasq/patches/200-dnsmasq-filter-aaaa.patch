@@ -1,0 +1,77 @@
+From b22c954b855e598a8e0858cf522d471137c69baa Mon Sep 17 00:00:00 2001
+From: Senorsen <senorsen.zhang@gmail.com>
+Date: Mon, 28 Mar 2022 10:37:19 +0800
+Subject: [PATCH] patch dnsmasq 2.85, add filter-aaaa options
+
+---
+ src/dnsmasq.h |  3 ++-
+ src/option.c  |  3 +++
+ src/rfc1035.c | 10 ++++++++++
+ 3 files changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/src/dnsmasq.h b/src/dnsmasq.h
+index 1e21005..0569aed 100644
+--- a/src/dnsmasq.h
++++ b/src/dnsmasq.h
+@@ -270,7 +270,8 @@ struct event_desc {
+ #define OPT_SINGLE_PORT    60
+ #define OPT_LEASE_RENEW    61
+ #define OPT_LOG_DEBUG      62
+-#define OPT_LAST           63
++#define OPT_FILTER_AAAA    63
++#define OPT_LAST           64
+ 
+ #define OPTION_BITS (sizeof(unsigned int)*8)
+ #define OPTION_SIZE ( (OPT_LAST/OPTION_BITS)+((OPT_LAST%OPTION_BITS)!=0) )
+diff --git a/src/option.c b/src/option.c
+index 6de5914..b50073a 100644
+--- a/src/option.c
++++ b/src/option.c
+@@ -170,6 +170,7 @@ struct myoption {
+ #define LOPT_PXE_VENDOR    361
+ #define LOPT_DYNHOST       362
+ #define LOPT_LOG_DEBUG     363
++#define LOPT_FILTER_AAAA   364
+  
+ #ifdef HAVE_GETOPT_LONG
+ static const struct option opts[] =  
+@@ -345,6 +346,7 @@ static const struct myoption opts[] =
+     { "dhcp-ignore-clid", 0, 0,  LOPT_IGNORE_CLID },
+     { "dynamic-host", 1, 0, LOPT_DYNHOST },
+     { "log-debug", 0, 0, LOPT_LOG_DEBUG },
++    { "filter-aaaa", 0, 0, LOPT_FILTER_AAAA },
+     { NULL, 0, 0, 0 }
+   };
+ 
+@@ -527,6 +529,7 @@ static struct {
+   { LOPT_DUMPFILE, ARG_ONE, "<path>", gettext_noop("Path to debug packet dump file"), NULL },
+   { LOPT_DUMPMASK, ARG_ONE, "<hex>", gettext_noop("Mask which packets to dump"), NULL },
+   { LOPT_SCRIPT_TIME, OPT_LEASE_RENEW, NULL, gettext_noop("Call dhcp-script when lease expiry changes."), NULL },
++  { LOPT_FILTER_AAAA, OPT_FILTER_AAAA, NULL, gettext_noop("Filter all AAAA requests."), NULL },
+   { 0, 0, NULL, NULL, NULL }
+ }; 
+ 
+diff --git a/src/rfc1035.c b/src/rfc1035.c
+index 5a961b8..a03824e 100644
+--- a/src/rfc1035.c
++++ b/src/rfc1035.c
+@@ -1895,6 +1895,16 @@ size_t answer_request(struct dns_header *header, char *limit, size_t qlen,
+ 	    }
+ 	}
+ 
++      // patch to filter aaaa forwards
++      if (qtype == T_AAAA && option_bool(OPT_FILTER_AAAA) )
++      {
++        //return a null reply
++        ans = 1;
++        if (!dryrun) log_query(F_CONFIG | F_IPV6 | F_NEG, name, &addr, NULL);
++        break;
++      }
++      // end of patch
++
+       if (!ans)
+ 	return 0; /* failed to answer a question */
+     }
+-- 
+2.32.0 (Apple Git-132)
+
